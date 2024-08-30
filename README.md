@@ -188,7 +188,7 @@ or standard macOS application _Screen Sharing_.
 With the containers running, enter selenium.moodle.orb.local:5900 as the port in VNC Viewer or type [vnc://selenium.moodle.orb.local:5900](vnc://127.0.0.1:5900) address
 in _Screen Sharing_ application. You will be prompted for a password, the password is 'secret'.
 
-You should be able to see an empty Desktop. When you run any Behat tests with @javascript tag
+You should be able to see an empty desktop. When you run any Behat tests with @javascript tag
 a browser will pop up, and you will see the tests execute.
 
 ### Using Browser debug console to view Behat tests in headless Chrome
@@ -247,7 +247,7 @@ mdc-stop
 mdc-start
 ```
 
-It is also possible to use Dashboard in Docker Desktop to stop, start or delete the instances. 
+It is also possible to use OrbStack application to stop, start or delete the instances. 
 
 ## Environment variables file _./moodle-docker.env_
 
@@ -388,11 +388,6 @@ webserver or database.
 There is also a simple _Docker manager_ in Services tab in PhpStorm which can be used to stop/start the containers.
 
 ### Configure remote docker PHP CLI interpreter
-
-First make sure that Docker Desktop setting "Use Docker Compose V2" is enabled,
-if not PHPStorm will not be able to parse _moodle-docker-compose.yml_ using
-_docker-compose_ executable. The option "Use Compose V2 beta" does not seem
-to function properly yet, so overriding the docker-compose seems to be the only option.
 
 Then verify moodle-docker instance is up and running - see Quick start section above.
 
