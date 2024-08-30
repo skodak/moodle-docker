@@ -1,7 +1,6 @@
 services:
   webserver:
-#    image: "moodlehq/moodle-php-apache:${MOODLE_DOCKER_PHP_VERSION}"
-    image: "petrskodaopenlms/moodle-php-apache:${MOODLE_DOCKER_PHP_VERSION}"
+    image: "moodlehq/moodle-php-apache:${MOODLE_DOCKER_PHP_VERSION}"
     depends_on:
       - db
     volumes:
