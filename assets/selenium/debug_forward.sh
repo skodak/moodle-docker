@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-sudo apt-get update
-sudo apt-get install socat
+if ! dpkg-query -l socat > dev/null; then
+    sudo apt-get update
+    sudo apt-get install socat
+fi
 
-sudo socat TCP4-LISTEN:9223,fork TCP4:127.0.0.1:9222
+socat TCP-LISTEN:9229,fork TCP4:127.0.0.1:9222

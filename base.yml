@@ -1,7 +1,7 @@
 services:
   webserver:
 #    image: "moodlehq/moodle-php-apache:${MOODLE_DOCKER_PHP_VERSION}"
-    image: "petrskodaopenlms/moodle-php-apache:${MOODLE_DOCKER_PHP_VERSION}"
+    image: "skodak2/moodle-php-apache:${MOODLE_DOCKER_PHP_VERSION}"
     depends_on:
       - db
     volumes:
@@ -18,15 +18,11 @@ services:
       MOODLE_DOCKER_DBNAME: moodle
       MOODLE_DOCKER_DBUSER: moodle
       MOODLE_DOCKER_DBPASS: "m@0dl3ing"
-      MOODLE_DOCKER_BROWSER: firefox
-      MOODLE_DOCKER_WEB_HOST: "${MOODLE_DOCKER_WEB_HOST}"
+      MOODLE_DOCKER_BROWSER: "${MOODLE_DOCKER_BROWSER_NAME}"
+      COMPOSE_PROJECT_NAME:  "${COMPOSE_PROJECT_NAME}"
       COMPOSER_ALLOW_SUPERUSER: 1
   exttests:
     image: moodlehq/moodle-exttests
     volumes:
       - "${ASSETDIR}/exttests/apache2_ports.conf:/etc/apache2/ports.conf"
       - "${ASSETDIR}/exttests/apache2.conf:/etc/apache2/sites-enabled/000-default.conf"
-  selenium:
-    image: "selenium/standalone-firefox:${MOODLE_DOCKER_BROWSER_TAG}"
-    volumes:
-      - "${MOODLE_DOCKER_WWWROOT}:/var/www/html:ro"

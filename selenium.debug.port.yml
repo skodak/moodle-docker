@@ -1,0 +1,4 @@
+services:
+  selenium:
+    ports:
+      - "$MOODLE_DOCKER_BROWSER_DEBUG_PORT:9229"

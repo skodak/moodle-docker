@@ -1,24 +1,29 @@
-# moodle-docker: Docker Containers for Moodle Developers
+# OrbStack Docker containers for Moodle development
 
-*__NOTE: This is a fork of Moodle Docker maintained by Petr Skoda__*
+*__NOTE: This is a fork of Moodle Docker, it is maintained by Petr Skoda.__*
 
-This repository contains Docker configuration aimed at Moodle developers and testers to easily deploy a development or testing environment for Moodle.
+This repository contains Docker configuration for OrbStack aimed at Moodle developers and testers to easily deploy a development
+or testing environment for Moodle or any other fork of Moodle.
+
+## Prerequisites
+* Computer with Apple macOS
+* [OrbStack](https://orbstack.dev/) must be installed
+
+## Why OrbStack?
+
+* better performance than Docker Desktop for Mac
+* container domains with https instead of confusing port forwarding
+* native macOS app
 
 ## Features:
-* All supported database servers (PostgreSQL, MySQL, Microsoft SQL Server, Oracle XE)
-* Behat/Selenium configuration for Firefox and Chrome
+* Supported database servers - PostgreSQL, MariaDB and MySQL (MS SQL Server might work only on amd64 platforms)
+* Behat/Selenium configuration for Chromium, Chrome, Edge and Firefox
 * Catch-all smtp server and web interface to messages using [Mailpit](https://github.com/axllent/mailpit)
 * All PHP Extensions enabled configured for external services (e.g. solr, ldap)
 * All supported PHP versions
-* Configuration is possible via _./moodle-docker.env_ file or environment variables
-* Full support for macOS with Apple M1/M2 CPU
-* Windows is not supported at all
-* Backed by [automated tests](https://travis-ci.com/moodlehq/moodle-docker/branches)
-
-## Prerequisites
-* [Docker](https://docs.docker.com) and [Docker Compose](https://docs.docker.com/compose/cli-command/#installing-compose-v2) installed if your Docker CLI version does not support `docker compose` command.
-* It's recommended to always run the latest versions of each, but at the minimum Docker v20.10.15 and Docker Compose v2.5.0 should be used.
-* 3.25GB of RAM (if you choose [Microsoft SQL Server](https://docs.microsoft.com/en-us/sql/linux/sql-server-linux-setup#prerequisites) as db server)
+* Configuration is done via _./moodle-docker.env_ file and optional environment variables
+* Full support for macOS with Apple M-series CPUs
+* Windows and Linux are not supported
 
 ## Quick start
 
@@ -49,13 +54,13 @@ export PATH=$PATH:/path/to/moodle-docker/bin
 cd /path/to/moodle
 mdc-up
 ```
-8. Now you can complete the test site installation at [http://localhost:8000/](http://localhost:8000/).
+8. Now you can complete the test site installation at [https://webserver.moodle.orb.local/](https://webserver.moodle.orb.local/).
 9. Alternatively you can complete the test site installation from CLI:
 ```bash
 cd /path/to/moodle
 site-install --agree-license --adminpass="test"
 ```
-10. You can view emails which Moodle has sent out at [http://localhost:8000/_/mail](http://localhost:8000/_/mail).
+10. You can view emails which Moodle has sent out at [https://mailpit.moodle.orb.local/](https://mailpit.moodle.orb.local/).
 11. When you are finished with testing you can delete the instances using `mdc-down` script:
 ```bash
 cd /path/to/moodle
@@ -77,36 +82,15 @@ First Moodle project:
 ```
 # Specifies database type
 MOODLE_DOCKER_DB=pgsql
-
-# Use a uniquie local web port
-MOODLE_DOCKER_WEB_PORT=8001
-
-# Use a uniquie local VNC port
-MOODLE_DOCKER_SELENIUM_VNC_PORT=5901
-
-# Use a uniquie local database port
-MOODLE_DOCKER_DB_PORT=5401
 ```
 
 Second Moodle project:
 ```
 # Specifies database type
-MOODLE_DOCKER_DB=pgsql
-
-# Use a uniquie local web port
-MOODLE_DOCKER_WEB_PORT=8002
-
-# Use a uniquie local VNC port
-MOODLE_DOCKER_SELENIUM_VNC_PORT=5902
-
-# Use a uniquie local database port
-MOODLE_DOCKER_DB_PORT=5402
+MOODLE_DOCKER_DB=mysql
 ```
 
-If you want to run multiple docker compose instances for one moodle project directory,
-then you can create separate directories with __moodle-docker.env__ files that contain
-explicit __MOODLE_DOCKER_WWWROOT__ and __COMPOSE_PROJECT_NAME__ values.
-Alternatively you can export environment settings instead of the environment file.
+You cannot have multiple docker compose instances for one moodle project directory.
 
 ## Use docker for running PHPUnit tests
 
@@ -188,7 +172,7 @@ Started at 29-09-2022, 00:58
 
 Notes:
 
-* The behat faildump directory is exposed at http://localhost:8000/_/faildumps/.
+* The behat faildump directory is exposed at https://webserver.moodle.orb.local/_/faildumps/.
 * Use `MOODLE_DOCKER_BROWSER` to switch the browser you want to run the test against.
   You need to recreate your containers using `mdc-rebuild`,
   if you make any changes in __moodle-docker.env__ file.
@@ -196,17 +180,12 @@ Notes:
 ### Using VNC to view Behat tests
 
 If you want to observe the execution of scenarios in a web browser then
-add the following lines into you __moodle-docker.env__ file before executing `mdc-up`:
-
-```
-# Instruct selenium to expose a VNC session on this port
-MOODLE_DOCKER_SELENIUM_VNC_PORT=5900
-```
+just connect to selenium container using OrbStack container domain name.
 
 You should be able to use any kind of VNC viewer, such as [Real VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/)
 or standard macOS application _Screen Sharing_.
 
-With the containers running, enter 0.0.0.0:5900 as the port in VNC Viewer or type [vnc://127.0.0.1:5900](vnc://127.0.0.1:5900) address
+With the containers running, enter selenium.moodle.orb.local:5900 as the port in VNC Viewer or type [vnc://selenium.moodle.orb.local:5900](vnc://127.0.0.1:5900) address
 in _Screen Sharing_ application. You will be prompted for a password, the password is 'secret'.
 
 You should be able to see an empty Desktop. When you run any Behat tests with @javascript tag
@@ -214,43 +193,23 @@ a browser will pop up, and you will see the tests execute.
 
 ### Using Browser debug console to view Behat tests in headless Chrome
 
+Make sure config.php behat settings match [template](templates/config.php)
+
 ```
 MOODLE_DOCKER_BROWSER=chromium:4.23.1
-# Instruct Chrome to expose a debugging port
-MOODLE_DOCKER_BROWSER_DEBUG_PORT=9222
+# Instruct Chrome to expose a debugging port - unfortunately orbStack domains do not seem to work in 
+MOODLE_DOCKER_BROWSER_DEBUG_PORT=9229
+
 ```
 
-Tweak config.php to use chrome or chromium.
-
-```php
-$CFG->behat_profiles = array(
-    'default' => array(
-        'browser' => (getenv('MOODLE_DOCKER_BROWSER') === 'chromium') ? 'chrome' : getenv('MOODLE_DOCKER_BROWSER'),
-        'wd_host' => 'http://selenium:4444/wd/hub',
-        'capabilities' => [
-            'extra_capabilities' => [
-                'chromeOptions' => [
-                    'args' => [
-                        'no-sandbox',
-                        'headless=new',
-                        'no-gpu',
-                        'remote-debugging-port=9222', // Do not change even if MOODLE_DOCKER_BROWSER_DEBUG_PORT different
-                    ],
-                ],
-            ],
-        ],
-    ),
-);
-```
-
-Run port forwarder from selected port in MOODLE_DOCKER_BROWSER_DEBUG_PORT to internal 9222:
+Run port forwarder from selected port in MOODLE_DOCKER_BROWSER_DEBUG_PORT=9229 to internal 9222:
 ```bash
 cd /path/to/moodle
 selenium-debug
 ```
 
 1. Open Chrome and go to chrome://inspect
-2. add localhost:MOODLE_DOCKER_BROWSER_DEBUG_PORT if different from 9222
+2. add 127.0.0.1:9229
 3. start behat run
 3. Click on Remote Target link with your session 
 
@@ -299,36 +258,22 @@ scripts are looking for it in the current working directory when executed.
 Changes in the environment file should be done **before** calling `mdc-up`. If your containers are running
 first call `mdc-down`, then update the environment file and finally start the containers again.
 
-| Environment Variable                      | Mandatory | Allowed values                                                                           | Default value                                                                        | Notes                                                                                                                                                                                                                                                                                                                  |
-|-------------------------------------------|-----------|------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `MOODLE_DOCKER_DB`                        | yes       | pgsql, mariadb, mysql, mssql, oracle                                                     | none                                                                                 | The database server to run against                                                                                                                                                                                                                                                                                     |
-| `MOODLE_DOCKER_WWWROOT`                   | no        | path on your file system                                                                 | current directory if ./_moodle-docker.env_ file exists                               | The path to the Moodle codebase you intend to test.                                                                                                                                                                                                                                                                    |
-| `MOODLE_DOCKER_DB_VERSION`                | no        | Docker tag - see relevant database page on docker-hub                                    | mysql: 8.0 <br/>pgsql: 13 <br/>mariadb: 10.7 <br/>mssql: 2017-latest <br/>oracle: 21 | The database server docker image tag                                                                                                                                                                                                                                                                                   |
-| `MOODLE_DOCKER_PHP_VERSION`               | no        | 8.1, 8.0, 7.4, 7.3, 7.2, 7.1, 7.0, 5.6                                                   | 8.0                                                                                  | The php version to use                                                                                                                                                                                                                                                                                                 |
-| `MOODLE_DOCKER_BROWSER`                   | no        | firefox, chrome, chromium  firefox:&lt;tag&gt;, chrome:&lt;tag&gt;                       | firefox:4                                                                            | The browser to run Behat against. Supports a colon notation to specify a specific Selenium docker image version to use. e.g. firefox:2.53.1 can be used to run with older versions of Moodle (<3.5)                                                                                                                    |
-| `MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES` | no        | any value                                                                                | not set                                                                              | If set, dependencies for memcached, redis, solr, and openldap are added                                                                                                                                                                                                                                                |
-| `MOODLE_DOCKER_BBB_MOCK`                  | no        | any value                                                                                | not set                                                                              | If set the BigBlueButton mock image is started and configured                |
-| `MOODLE_DOCKER_BEHAT_FAILDUMP`            | no        | Path on your file system                                                                 | not set                                                                              | Behat faildumps are already available at http://localhost:8000/_/faildumps/ by default, this allows for mapping a specific filesystem folder to retrieve the faildumps in bulk / automated ways                                                                                                                        |
-| `MOODLE_DOCKER_PHP_ERROR_LOG`             | no        | Path to PHP error log on your file system                                                | not set                                                                              |                                                                                                                                                                                                                                                                                                                        |
-| `MOODLE_DOCKER_BACKUPS`                   | no        | Path to backup directory on your file system                                             | not set                                                                              |                                                                                                                                                                                                                                                                                                                        |
-| `MOODLE_DOCKER_DB_PORT`                   | no        | any integer value                                                                        | none                                                                                 | If you want to bind to any host IP different from the default 127.0.0.1, you can specify it with the bind_ip:port format (0.0.0.0 means bind to all). Username is "moodle" (or "sa" for mssql) and password is "m@0dl3ing".                                                                                            |
-| `MOODLE_DOCKER_WEB_HOST`                  | no        | any valid hostname                                                                       | localhost                                                                            | The hostname for web                                                                                                                                                                                                                                                                                                   |
-| `MOODLE_DOCKER_WEB_PORT`                  | no        | any integer value (or bind_ip:integer)                                                   | 127.0.0.1:8000                                                                       | The port number for web. If set to 0, no port is used.<br/>If you want to bind to any host IP different from the default 127.0.0.1, you can specify it with the bind_ip:port format (0.0.0.0 means bind to all)                                                                                                        |
-| `MOODLE_DOCKER_WEB_PLATFORM`              | no        | linux/amd64                                                                              | none                                                                                 | Experimental setting for Apple M1/M2 CPUs                                                                                                                                                                                                                                                                              |
-| `MOODLE_DOCKER_DB_PLATFORM`               | no        | linux/amd64                                                                              | none                                                                                 | Experimental setting for Apple M1/M2 CPUs                                                                                                                                                                                                                                                                              |
-| `MOODLE_DOCKER_SELENIUM_VNC_PORT`         | no        | any integer value (or bind_ip:integer)                                                   | not set                                                                              | If set, the selenium node will expose a vnc session on the port specified. Similar to MOODLE_DOCKER_WEB_PORT, you can optionally define the host IP to bind to. If you just set the port, VNC binds to 127.0.0.1                                                                                                       |
-| `COMPOSE_PROJECT_NAME`                    | no        | must be unique                                                                           | current directory name                                                               | Must be set if multiple instances are active and _./moodle-docker.env_ is not used                                                                                                                                                                                                                                     |
-
-It is also possible to use environment variables instead of the environment file, for example:
-
-```bash
-    export MOODLE_DOCKER_WWWROOT=/path/to/moodle
-    export MOODLE_DOCKER_DB=pgsql
-    mdc up -d
-```
+| Environment Variable                      | Mandatory | Allowed values                                                     | Default value                                           | Notes                                                                                                                                                            |
+|-------------------------------------------|-----------|--------------------------------------------------------------------|---------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `MOODLE_DOCKER_DB`                        | yes       | pgsql, mariadb, mysql, mssql                                       | none                                                    | The database server to run against                                                                                                                               |
+| `MOODLE_DOCKER_WWWROOT`                   | no        | path on your file system                                           | current directory if ./_moodle-docker.env_ file exists  | Useful for non-moodle projects and when Moodle dirroot is not in the same directory as _moodle-docker.env_ file                                                  |
+| `MOODLE_DOCKER_DB_VERSION`                | no        | Docker tag - see relevant database page on docker-hub              | mysql: 8.4 <br/>pgsql: 16 <br/>mariadb: 11.4 <br/>mssql | The database server docker image tag                                                                                                                             |
+| `MOODLE_DOCKER_PHP_VERSION`               | no        | 8.1, 8.0, 8.2, 8.3                                                 | 8.1                                                     | The php version to use                                                                                                                                           |
+| `MOODLE_DOCKER_BROWSER`                   | no        | firefox, chrome, chromium  firefox:&lt;tag&gt;, chrome:&lt;tag&gt; | firefox:4                                               | The browser to run Behat against. Supports a colon notation to specify a specific Selenium docker image version to use.                                          |
+| `MOODLE_DOCKER_PHPUNIT_EXTERNAL_SERVICES` | no        | any value                                                          | not set                                                 | If set, dependencies for memcached, redis, solr, and openldap are added                                                                                          |
+| `MOODLE_DOCKER_BBB_MOCK`                  | no        | any value                                                          | not set                                                 | If set the BigBlueButton mock image is started and configured                                                                                                    |
+| `MOODLE_DOCKER_BEHAT_FAILDUMP`            | no        | Path on your file system                                           | not set                                                 | Behat faildumps are already available at https://webserver.moodle.orb.local/_/faildumps/ by default, but you can specify a different directory outside of Docker |
+| `MOODLE_DOCKER_PHP_ERROR_LOG`             | no        | Path to PHP error log on your file system                          | not set                                                 | You can specify a different PHP error logging file outside of Docker                                                                                             |
+| `MOODLE_DOCKER_BACKUPS`                   | no        | Path to backup directory on your file system                       | not set                                                 |                                                                                                                                                                  |
+| `COMPOSE_PROJECT_NAME`                    | no        | must be unique                                                     | current directory name                                  | Must be set if multiple instances are active and _./moodle-docker.env_ is not used, this is used as second part of the container domain                          |
 
 In addition to that, `MOODLE_DOCKER_RUNNING=1` env variable is defined and available
-in the webserver container to flag being run by `moodle-docker`. Developer
+in the webserver container to flag being run by `mdc`. Developer
 can use this to conditionally make changes in `config.php`. The common case is
 to load test-specific configuration:
 ```
@@ -434,7 +379,6 @@ The following Moodle customised docker images are close companions of this proje
 
 * [moodle-php-apache](https://github.com/moodlehq/moodle-php-apache): Apache/PHP Environment preconfigured for all Moodle environments
 * [moodle-db-mssql](https://github.com/moodlehq/moodle-db-mssql): Microsoft SQL Server for Linux configured for Moodle
-* [moodle-db-oracle](https://github.com/moodlehq/moodle-db-oracle): Oracle XE configured for Moodle
 
 ## PhpStorm configuration
 
@@ -503,8 +447,7 @@ If you have configured a VNC port then you can watch the scenario progress in yo
 
 ### Connect PhpStorm to docker database
 
-In order to connect to database from your local computer you need to add `MOODLE_DOCKER_DB_PORT`
-to your __moodle-docker.env__ file.
+You can connect to moodle database directly using container domains.
 
 Make sure your docker compose project is running and test site was initialised.
 
@@ -515,7 +458,7 @@ Then setup new database connection in PhpStorm through the exposed port, for exa
 3. Set "User:" field to 'moodle'
 4. Set "Password:" field to 'm@0dl3ing'
 5. Set "Database:" field to 'moodle'
-6. Set "Port:" field to MOODLE_DOCKER_DB_PORT value
+6. Set "Host:" to db.moodle.orb.local, keep "Port:" to default database port 
 7. Press "OK"
 8. Refresh the database metadata
 9. Open "Preferences / Language & Frameworks / SQL Dialects"
@@ -559,7 +502,6 @@ is highlighted and SQL syntax errors are detected.
 COMPOSE_PROJECT_NAME=devdocs
 MOODLE_DOCKER_WWWROOT=/path/to/devdocs
 
-MOODLE_DOCKER_WEB_PORT=8999
 MOODLE_DOCKER_PHP_VERSION=8.1
 MOODLE_DOCKER_DB=pgsql
 ```

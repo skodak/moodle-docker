@@ -3,7 +3,7 @@ services:
     environment:
       MOODLE_DOCKER_DBTYPE: pgsql
   db:
-    image: postgres:${MOODLE_DOCKER_DB_VERSION:-13}
+    image: postgres:${MOODLE_DOCKER_DB_VERSION:-16}
     command: postgres -c synchronous_commit=off -c full_page_writes=off
     environment:
       POSTGRES_USER: moodle

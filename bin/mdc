@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
-# Test if we have Docker Compose V2.
-ver=$(docker compose version > /dev/null 2>&1 && docker compose version --short) || true
-if [[ $ver =~ ^v?2 ]]; then
-  dockercompose_cmd="docker compose"
-else
-  echo 'Compose v2 is not available in Docker CLI, falling back to use docker-compose script'
-  dockercompose_cmd="docker-compose"
+# Check that the configuration file is present,
+# stop if not to prevent accidental creation of unwanted containers.
+filename="moodle-docker.env"
+if [ ! -f $filename ];
+then
+    echo "Missing moodle-docker.env file in current directory!"
+    exit 1
 fi
 
 # First find out if this was called from symlink,
@@ -22,7 +22,7 @@ basedir="$( cd "$( dirname "$thisfile" )/../" && pwd -P )"
 finalconfigfilename="moodle-docker-compose.yml"
 if [ -f $finalconfigfilename ];
 then
-    $dockercompose_cmd -f $finalconfigfilename "$@"
+    docker compose -f $finalconfigfilename "$@"
     exit 0
 fi
 
@@ -32,11 +32,8 @@ source "${basedir}/bin/include/env.sh"
 export BASEDIR="${basedir}"
 export ASSETDIR="${basedir}/assets"
 
-# Test if we have docker compose v2, and keep quiet if we don't.
-dockercompose=""
-
-dockercompose="${dockercompose} -f ${basedir}/base.yml"
-dockercompose="${dockercompose} -f ${basedir}/service.mail.yml"
+dockercompose="-f ${basedir}/base.yml"
+dockercompose="${dockercompose} -f ${basedir}/mailpit.yml"
 
 # PHP Version.
 export MOODLE_DOCKER_PHP_VERSION=${MOODLE_DOCKER_PHP_VERSION:-8.1}
@@ -53,34 +50,6 @@ then
     fi
 fi
 
-# Support PHP version overrides for DB not available any more.
-# use extra configuration file ./moodle-docker.yml instead in special cases.
-
-# Expose DB port if requested.
-if [[ $MOODLE_DOCKER_DB_PORT == *":"* ]] || [[ $MOODLE_DOCKER_DB_PORT -gt 0 ]]
-then
-    # If no bind ip has been configured (bind_ip:port), default to 127.0.0.1
-    if [[ ! $MOODLE_DOCKER_DB_PORT == *":"* ]]
-    then
-        export MOODLE_DOCKER_DB_PORT=127.0.0.1:$MOODLE_DOCKER_DB_PORT
-    fi
-    filename="${basedir}/db.${MOODLE_DOCKER_DB}.port.yml"
-    if [ -f $filename ];
-    then
-        dockercompose="${dockercompose} -f ${filename}"
-    fi
-fi
-
-# Force platform if requested.
-if [ ! -z "$MOODLE_DOCKER_WEB_PLATFORM" ];
-then
-    dockercompose="${dockercompose} -f ${basedir}/webserver.platform.yml"
-fi
-if [ ! -z "$MOODLE_DOCKER_DB_PLATFORM" ];
-then
-    dockercompose="${dockercompose} -f ${basedir}/db.platform.yml"
-fi
-
 # Selenium browser
 browserparts=(${MOODLE_DOCKER_BROWSER//:/ })
 export MOODLE_DOCKER_BROWSER_NAME=${browserparts[0]}
@@ -88,7 +57,7 @@ export MOODLE_DOCKER_BROWSER_TAG=${browserparts[1]}
 
 if [[ -z "$MOODLE_DOCKER_BROWSER_NAME" ]];
 then
-    MOODLE_DOCKER_BROWSER_NAME=firefox
+    MOODLE_DOCKER_BROWSER_NAME=chromium
 fi
 
 if [[ -z "$MOODLE_DOCKER_BROWSER_TAG" ]];
@@ -96,26 +65,12 @@ then
     MOODLE_DOCKER_BROWSER_TAG=4
 fi
 
-if [[ "$MOODLE_DOCKER_BROWSER_NAME" != "firefox" ]];
-then
-    dockercompose="${dockercompose} -f ${basedir}/selenium.${MOODLE_DOCKER_BROWSER_NAME}.yml"
-fi
+dockercompose="${dockercompose} -f ${basedir}/selenium.yml"
 
-# Selenium VNC port
-if [[ $MOODLE_DOCKER_SELENIUM_VNC_PORT == *":"* ]] || [[ $MOODLE_DOCKER_SELENIUM_VNC_PORT -gt 0 ]]
-then
-    # If no bind ip has been configured (bind_ip:port), default to 127.0.0.1
-    if [[ ! $MOODLE_DOCKER_SELENIUM_VNC_PORT == *":"* ]]
-    then
-        MOODLE_DOCKER_SELENIUM_VNC_PORT=127.0.0.1:$MOODLE_DOCKER_SELENIUM_VNC_PORT
-    fi
-    dockercompose="${dockercompose} -f ${basedir}/selenium.vnc.yml"
-fi
-
-# Browser debug port
+# Browser debug port.
 if [[ $MOODLE_DOCKER_BROWSER_DEBUG_PORT == *":"* ]] || [[ $MOODLE_DOCKER_BROWSER_DEBUG_PORT -gt 0 ]]
 then
-    dockercompose="${dockercompose} -f ${basedir}/selenium.debug.yml"
+    dockercompose="${dockercompose} -f ${basedir}/selenium.debug.port.yml"
 fi
 
 # External services
@@ -168,28 +123,6 @@ then
     dockercompose="${dockercompose} -f ${basedir}/webserver.phperrorlog.yml"
 fi
 
-# Webserver host
-export MOODLE_DOCKER_WEB_HOST=${MOODLE_DOCKER_WEB_HOST:-localhost}
-
-# Webserver port
-export MOODLE_DOCKER_WEB_PORT=${MOODLE_DOCKER_WEB_PORT:-8000}
-if [[ $MOODLE_DOCKER_WEB_PORT == *":"* ]] || [[ $MOODLE_DOCKER_WEB_PORT -gt 0 ]]
-then
-    # If no bind ip has been configured (bind_ip:port), default to 127.0.0.1
-    if [[ ! $MOODLE_DOCKER_WEB_PORT == *":"* ]]
-    then
-        MOODLE_DOCKER_WEB_PORT=127.0.0.1:$MOODLE_DOCKER_WEB_PORT
-    fi
-    dockercompose="${dockercompose} -f ${basedir}/webserver.port.yml"
-fi
-
-
-# Mac OS Compatbility
-if [[ "$(uname)" == "Darwin" ]]; then
-    # Support https://docs.docker.com/docker-for-mac/osxfs-caching/
-    dockercompose="${dockercompose} -f ${basedir}/volumes-cached.yml"
-fi
-
 # Apply local customisations if a local.yml is found.
 # Note: This must be the final modification before the docker-compose command is called.
 localfile="${basedir}/local.yml"
@@ -207,16 +140,6 @@ then
 fi
 
 
-# Always try to create the final config file,
-# use it if docker is configured via new env file.
-$dockercompose_cmd $dockercompose config > ${finalconfigfilename} || rm ${finalconfigfilename} || false
-if [ -f $finalconfigfilename ];
-then
-    filename="moodle-docker.env"
-    if [ -f $filename ];
-    then
-      dockercompose=" -f ${finalconfigfilename}"
-    fi
-fi
-
-$dockercompose_cmd $dockercompose "$@"
+# Create the final config file and use it.
+docker compose $dockercompose config > ${finalconfigfilename} || rm ${finalconfigfilename} || false
+docker compose -f $finalconfigfilename "$@"

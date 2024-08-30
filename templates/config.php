@@ -25,23 +25,8 @@ if (getenv('MOODLE_DOCKER_DBTYPE') === 'sqlsrv') {
     ];
 }
 
-$host = 'localhost';
-if (!empty(getenv('MOODLE_DOCKER_WEB_HOST'))) {
-    $host = getenv('MOODLE_DOCKER_WEB_HOST');
-}
-$CFG->wwwroot   = "http://{$host}";
-$port = getenv('MOODLE_DOCKER_WEB_PORT');
-if (!empty($port)) {
-    // Extract port in case the format is bind_ip:port.
-    $parts = explode(':', $port);
-    $port = end($parts);
-    if ((string)(int)$port === (string)$port) { // Only if it's int value.
-        $CFG->wwwroot .= ":{$port}";
-    }
-}
-if (strpos($CFG->wwwroot, 'https://') !== 0) {
-    $CFG->cookiesecure = false;
-}
+$CFG->wwwroot   = 'https://webserver.' . getenv('COMPOSE_PROJECT_NAME') . '.orb.local';
+$CFG->sslproxy  = true;
 $CFG->dataroot  = '/var/www/moodledata';
 $CFG->admin     = 'admin';
 $CFG->directorypermissions = 0777;
@@ -72,12 +57,34 @@ define('TEST_EXTERNAL_FILES_HTTPS_URL', 'http://exttests:9000');
 $CFG->behat_wwwroot   = 'http://webserver';
 $CFG->behat_dataroot  = '/var/www/behatdata';
 $CFG->behat_prefix = 'b_';
-$CFG->behat_profiles = array(
-    'default' => array(
-        'browser' => (getenv('MOODLE_DOCKER_BROWSER') === 'chromium') ? 'chrome' : getenv('MOODLE_DOCKER_BROWSER'),
-        'wd_host' => 'http://selenium:4444/wd/hub',
-    ),
-);
+if (getenv('MOODLE_DOCKER_BROWSER') === 'chromium' || getenv('MOODLE_DOCKER_BROWSER') === 'chrome') {
+    $CFG->behat_profiles = array(
+        'default' => array(
+            'browser' => 'chrome',
+            'wd_host' => 'http://selenium:4444/wd/hub',
+            'capabilities' => [
+                'extra_capabilities' => [
+                    'chromeOptions' => [
+                        'args' => [
+                            'no-sandbox',
+                            //'headless=new',
+                            //'no-gpu',
+                            'disable-dev-shm-usage',
+                            'remote-debugging-port=9222', // Do not change, this is redirected to 9229 to allow non-localhost access.
+                        ],
+                    ],
+                ],
+            ],
+        ),
+    );
+} else {
+    $CFG->behat_profiles = array(
+        'default' => array(
+            'browser' => getenv('MOODLE_DOCKER_BROWSER'),
+            'wd_host' => 'http://selenium:4444/wd/hub',
+        ),
+    );
+}
 $CFG->behat_faildump_path = '/var/www/behatfaildumps';
 
 define('PHPUNIT_LONGTEST', true);

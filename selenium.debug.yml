@@ -1,6 +1,0 @@
-services:
-  selenium:
-    ports:
-      - "$MOODLE_DOCKER_BROWSER_DEBUG_PORT:9223"
-    volumes:
-      - "${ASSETDIR}/selenium/debug_forward.sh:/debug_forward.sh"
