@@ -1,1 +1,1 @@
-*__NOTE: This fork of Moodle Docker is not maintained anymore, please use https://github.com/skodak/ instead.__*
+*__NOTE: This fork of Moodle Docker is not maintained anymore, please use https://github.com/skodak/mdc/ instead.__*
